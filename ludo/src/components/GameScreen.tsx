@@ -276,11 +276,30 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
     const dx = a.x - canvasSize.w / 2;
     const dy = a.y - canvasSize.h / 2;
     const len = Math.hypot(dx, dy) || 1;
-    // Push further outward so the dice sits in the screen corner nearest to the yard
+    // Board rectangle inside the canvas (board is centred and scaled to fit)
+    const bnd = g?.geom.bounds;
+    const diceH = 104; // dice (76px) + label
+    if (bnd) {
+      const sc = Math.min(canvasSize.w / (bnd.maxX - bnd.minX), canvasSize.h / (bnd.maxY - bnd.minY));
+      const bh = (bnd.maxY - bnd.minY) * sc;
+      const top = (canvasSize.h - bh) / 2;
+      const bottom = top + bh;
+      const roomBelow = canvasSize.h - bottom;
+      const roomAbove = top;
+      // Prefer the side of the board the player's yard is on, so the dice never covers the board
+      const preferBelow = dy > 0;
+      const placeBelow = preferBelow ? roomBelow >= diceH : roomAbove < diceH && roomBelow >= diceH;
+      const placeAbove = !placeBelow && (preferBelow ? roomAbove >= diceH : roomAbove >= diceH);
+      if (placeBelow || placeAbove) {
+        const x = Math.max(52, Math.min(canvasSize.w - 52, a.x));
+        const y = placeBelow ? bottom + 8 + diceH / 2 : top - 8 - diceH / 2;
+        return { left: `${x}px`, top: `${y}px`, transform: 'translate(-50%, -50%)', zIndex: 15 };
+      }
+    }
+    // Fallback (very short screens): sit in the corner nearest to the yard
     const pad = 52;
     let x = a.x + (dx / len) * 56;
     let y = a.y + (dy / len) * 56;
-    // Clamp to canvas (keep the dice fully visible)
     x = Math.max(pad, Math.min(canvasSize.w - pad, x));
     y = Math.max(pad, Math.min(canvasSize.h - pad, y));
     return { left: `${x}px`, top: `${y}px`, transform: 'translate(-50%, -50%)', zIndex: 15 };
