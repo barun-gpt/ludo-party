@@ -4,7 +4,7 @@ import type { Theme } from '../themes';
 import { loadScores } from '../storage';
 import { Btn, IconBtn } from './ui';
 
-export type MenuModal = 'themes' | 'scores' | 'help' | 'settings';
+export type MenuModal = 'themes' | 'shop' | 'scores' | 'help' | 'settings';
 
 interface Props {
   theme: Theme;
@@ -112,8 +112,8 @@ export default function StartScreen({ theme, settings, update, onQuick, onSetup,
             <div className="text-xs font-medium text-[var(--sub)]">2–6 players · friends &amp; bots</div>
           </Btn>
           <div className="grid grid-cols-3 gap-3">
-            <Btn variant="secondary" onClick={() => onModal('themes')} className="px-2 py-2.5 text-2xl">
-              🎨<div className="text-xs font-semibold">Themes</div>
+            <Btn variant="secondary" onClick={() => onModal('shop')} className="px-2 py-2.5 text-2xl">
+              🛒<div className="text-xs font-semibold">Shop</div>
             </Btn>
             <Btn variant="secondary" onClick={() => onModal('scores')} className="px-2 py-2.5 text-2xl">
               🏆<div className="text-xs font-semibold">Scores</div>

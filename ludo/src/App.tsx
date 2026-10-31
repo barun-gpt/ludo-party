@@ -4,9 +4,16 @@ import BackgroundFX from './components/BackgroundFX';
 import GameScreen from './components/GameScreen';
 import SetupScreen from './components/SetupScreen';
 import StartScreen, { type MenuModal } from './components/StartScreen';
-import { HelpModal, HighScoresModal, SettingsModal, ThemesModal } from './components/Overlays';
+import { HelpModal, HighScoresModal, SettingsModal } from './components/Overlays';
+import BottomNav, { NAV_H, type Tab } from './components/BottomNav';
+import ActivityTab from './components/ActivityTab';
+import LeaderboardTab from './components/LeaderboardTab';
+import ProfileTab from './components/ProfileTab';
+import ShopModal from './components/ShopModal';
+import { equippedTheme } from './economy/cosmetics';
+import { useStore } from './economy/store';
 import type { GameOptions, Settings } from './game/types';
-import { getTheme, themeVars } from './themes';
+import { themeVars } from './themes';
 import { loadSettings, saveSettings } from './storage';
 import { quickOptions } from './setup';
 
@@ -18,7 +25,11 @@ export default function App() {
   const [gameOpts, setGameOpts] = useState<GameOptions | null>(null);
   const [gameKey, setGameKey] = useState(0);
   const [modal, setModal] = useState<MenuModal | null>(null);
-  const theme = useMemo(() => getTheme(settings.theme), [settings.theme]);
+  const [tab, setTab] = useState<Tab>('play');
+  const { eco } = useStore();
+  const { ui, token, dice, board } = eco.equipped;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const theme = useMemo(() => equippedTheme(eco), [ui, token, dice, board]);
 
   const update = useCallback((p: Partial<Settings>) => setSettings((s) => ({ ...s, ...p })), []);
 
@@ -57,13 +68,16 @@ export default function App() {
   const openScores = useCallback(() => setModal('scores'), []);
   const closeModal = useCallback(() => setModal(null), []);
 
+  const navVisible = !(tab === 'play' && screen === 'game');
+
   return (
     <div
       className={`app-bg font-game fixed inset-0 overflow-hidden ${theme.animatedBg ? 'animated' : ''}`}
       style={themeVars(theme) as CSSProperties}
     >
       <BackgroundFX theme={theme} />
-      {screen === 'menu' && (
+      <div className="absolute inset-x-0 top-0" style={{ bottom: navVisible ? `calc(${NAV_H}px + env(safe-area-inset-bottom))` : 0 }}>
+      {tab === 'play' && screen === 'menu' && (
         <StartScreen
           theme={theme}
           settings={settings}
@@ -74,10 +88,10 @@ export default function App() {
           modalOpen={modal !== null}
         />
       )}
-      {screen === 'setup' && (
+      {tab === 'play' && screen === 'setup' && (
         <SetupScreen theme={theme} settings={settings} update={update} onBack={() => setScreen('menu')} onStart={startGame} />
       )}
-      {screen === 'game' && gameOpts && (
+      {tab === 'play' && screen === 'game' && gameOpts && (
         <GameScreen
           key={gameKey}
           options={gameOpts}
@@ -90,7 +104,12 @@ export default function App() {
           modalOpen={modal !== null}
         />
       )}
-      {modal === 'themes' && <ThemesModal value={settings.theme} onPick={(id) => update({ theme: id })} onClose={closeModal} />}
+      {tab === 'activity' && <ActivityTab />}
+      {tab === 'leaderboard' && <LeaderboardTab />}
+      {tab === 'profile' && <ProfileTab onShop={() => setModal('shop')} onSettings={() => setModal('settings')} onHelp={() => setModal('help')} />}
+      </div>
+      {navVisible && <BottomNav tab={tab} onTab={setTab} />}
+      {(modal === 'themes' || modal === 'shop') && <ShopModal initial={modal === 'themes' ? 'ui' : 'token'} onClose={closeModal} />}
       {modal === 'scores' && <HighScoresModal theme={theme} onClose={closeModal} />}
       {modal === 'help' && <HelpModal onClose={closeModal} />}
       {modal === 'settings' && <SettingsModal settings={settings} update={update} onClose={closeModal} />}

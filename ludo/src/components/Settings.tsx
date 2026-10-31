@@ -71,9 +71,8 @@ export function ThemeGrid({ value, onPick, small }: { value: string; onPick: (id
 export function SettingsPanel({ settings, update }: { settings: Settings; update: (p: Partial<Settings>) => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <div className="mb-1.5 text-sm font-bold">🎨 Theme</div>
-        <ThemeGrid value={settings.theme} onPick={(id) => update({ theme: id })} small />
+      <div className="rounded-2xl bg-black/5 px-3 py-2 text-sm font-semibold text-[var(--sub)]">
+        🎨 Themes, tokens, dice and boards are unlocked with coins in the Shop (Profile tab).
       </div>
       <div className="rounded-2xl bg-black/5 px-2 py-1">
         <Toggle checked={settings.music} onChange={(v) => update({ music: v })} label="🎵 Music" />

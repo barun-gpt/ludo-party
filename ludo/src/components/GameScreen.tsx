@@ -5,6 +5,7 @@ import type { BannerMsg, GameOptions, Results, Settings, Snapshot } from '../gam
 import type { Theme } from '../themes';
 import { audio } from '../audio/audio';
 import { addScore } from '../storage';
+import { addPlaySeconds, recordGameResult } from '../economy/store';
 import { useMedia } from '../hooks/useMedia';
 import { IconBtn } from './ui';
 import { Banner, DicePanel, PlayersPanel } from './Hud';
@@ -31,6 +32,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
   const [paused, setPausedState] = useState(false);
   const [banner, setBanner] = useState<BannerMsg | null>(null);
   const [results, setResults] = useState<Results | null>(null);
+  const [coinsEarned, setCoinsEarned] = useState(0);
   const [newHigh, setNewHigh] = useState<number[]>([]);
   const landscape = useMedia('(orientation: landscape)');
   // Compact mode: portrait phones (narrow + portrait). Tablets and landscape phones use the full layout.
@@ -89,6 +91,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
         if (idx >= 0) marks.push(row.pi);
       }
       setNewHigh(marks);
+      setCoinsEarned(recordGameResult(r));
       setResults(r);
     };
 
@@ -241,6 +244,14 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
     c.style.cursor = clickable ? 'pointer' : 'default';
   };
 
+  // count active play time (not while paused / after game over) for the daily & weekly time tasks
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (!pausedRef.current && !resultsRef.current) addPlaySeconds(5);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
   const roll = useCallback(() => {
     audio.unlock();
     gameRef.current?.requestRoll();
@@ -387,7 +398,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
         />
       )}
       {results && !modalOpen && (
-        <GameOver results={results} theme={theme} newHigh={newHigh} onRestart={onRestart} onMenu={onExit} onScores={onScores} />
+        <GameOver results={results} theme={theme} newHigh={newHigh} coins={coinsEarned} onRestart={onRestart} onMenu={onExit} onScores={onScores} />
       )}
     </div>
   );

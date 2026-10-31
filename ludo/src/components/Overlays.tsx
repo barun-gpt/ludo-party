@@ -6,6 +6,7 @@ import { clearScores, loadScores } from '../storage';
 import { Btn, Modal } from './ui';
 import { SettingsPanel, ThemeGrid } from './Settings';
 import { MEDALS } from './Hud';
+import { POINTS_PER_COIN } from '../economy/config';
 
 export function ordinal(n: number) {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -53,10 +54,12 @@ export function GameOver({
   results,
   theme,
   newHigh,
+  coins,
   onRestart,
   onMenu,
   onScores,
 }: {
+  coins?: number;
   results: Results;
   theme: Theme;
   newHigh: number[];
@@ -91,6 +94,9 @@ export function GameOver({
         </div>
         <div className="text-sm text-[var(--sub)]">
           ⏱️ {mins}:{String(secs).padStart(2, '0')} · {results.rows.length} players
+        </div>
+        <div className="panel rounded-full px-4 py-1.5 text-base font-bold">
+          🪙 +{coins ?? 0} coins <span className="text-xs font-semibold text-[var(--sub)]">({POINTS_PER_COIN * 10} points = 10 coins)</span>
         </div>
         <div className="flex w-full flex-col gap-1.5">
           {results.rows.map((r) => {

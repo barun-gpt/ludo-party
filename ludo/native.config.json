@@ -1,0 +1,11 @@
+{
+  "apiUrl": "",
+  "googleWebClientId": "",
+  "facebookAppId": "",
+  "facebookClientToken": "",
+  "admobAppId": "",
+  "admobRewardedUnitId": "",
+  "admobTesting": true,
+  "instagramUrl": "https://www.instagram.com/YOUR_INSTAGRAM_PAGE",
+  "facebookPageUrl": "https://www.facebook.com/YOUR_FACEBOOK_PAGE"
+}

@@ -12,7 +12,10 @@ export interface MusicStyle {
 
 export type Ambient = 'bokeh' | 'dots' | 'grid' | 'sprinkles' | 'bubbles' | 'leaves' | 'stars' | 'hearts' | 'snow';
 
+export type TokenShape = 'circle' | 'flat' | 'hexagon' | 'star' | 'heart';
+
 export interface Theme {
+  tokenShape?: TokenShape;
   id: string;
   name: string;
   emoji: string;

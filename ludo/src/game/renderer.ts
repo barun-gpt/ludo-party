@@ -472,11 +472,12 @@ export class Renderer {
 
   private sprite(color: string) {
     const r = TOKEN_R * this.scale * this.dpr;
-    const key = color + '|' + Math.round(r * 4);
+    const shape = this.theme.tokenShape ?? 'circle';
+    const key = color + '|' + shape + '|' + Math.round(r * 4);
     let sp = this.sprites.get(key);
     if (sp) return sp;
     const neon = this.theme.style === 'neon';
-    const pad = Math.ceil(r * (neon ? 0.9 : 0.4)) + 2;
+    const pad = Math.ceil(r * (neon ? 0.9 : shape === 'circle' || shape === 'flat' ? 0.4 : 0.6)) + 2;
     const size = Math.ceil(r * 2 + pad * 2);
     const c = document.createElement('canvas');
     c.width = c.height = size;
@@ -487,28 +488,58 @@ export class Renderer {
       x.shadowColor = color;
       x.shadowBlur = r * 0.9;
     }
-    x.fillStyle = shade(color, -0.42);
-    x.beginPath();
-    x.arc(cx, cy + r * 0.15, r, 0, TAU);
-    x.fill();
+    const path = (px: number, py: number, pr: number) => {
+      x.beginPath();
+      if (shape === 'hexagon') {
+        for (let i = 0; i < 6; i++) {
+          const a = (TAU * i) / 6 - TAU / 4;
+          i ? x.lineTo(px + Math.cos(a) * pr * 1.08, py + Math.sin(a) * pr * 1.08) : x.moveTo(px + Math.cos(a) * pr * 1.08, py + Math.sin(a) * pr * 1.08);
+        }
+        x.closePath();
+      } else if (shape === 'star') {
+        for (let i = 0; i < 10; i++) {
+          const a = (TAU * i) / 10 - TAU / 4;
+          const rr = pr * (i % 2 ? 0.55 : 1.2);
+          i ? x.lineTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr) : x.moveTo(px + Math.cos(a) * rr, py + Math.sin(a) * rr);
+        }
+        x.closePath();
+      } else if (shape === 'heart') {
+        x.moveTo(px, py + pr * 0.95);
+        x.bezierCurveTo(px - pr * 1.5, py, px - pr * 0.95, py - pr * 1.1, px, py - pr * 0.35);
+        x.bezierCurveTo(px + pr * 0.95, py - pr * 1.1, px + pr * 1.5, py, px, py + pr * 0.95);
+        x.closePath();
+      } else {
+        x.arc(px, py, pr, 0, TAU);
+      }
+    };
+    const flat = shape === 'flat';
+    if (!flat) {
+      x.fillStyle = shade(color, -0.42);
+      path(cx, cy + r * 0.15, r);
+      x.fill();
+    }
     x.shadowBlur = 0;
-    const gr = x.createRadialGradient(cx - r * 0.35, cy - r * 0.45, r * 0.1, cx, cy, r * 1.05);
-    gr.addColorStop(0, shade(color, 0.5));
-    gr.addColorStop(0.5, color);
-    gr.addColorStop(1, shade(color, -0.22));
-    x.fillStyle = gr;
-    x.beginPath();
-    x.arc(cx, cy, r, 0, TAU);
+    if (flat) {
+      x.fillStyle = color;
+    } else {
+      const gr = x.createRadialGradient(cx - r * 0.35, cy - r * 0.45, r * 0.1, cx, cy, r * 1.05);
+      gr.addColorStop(0, shade(color, 0.5));
+      gr.addColorStop(0.5, color);
+      gr.addColorStop(1, shade(color, -0.22));
+      x.fillStyle = gr;
+    }
+    path(cx, cy, r);
     x.fill();
     x.lineWidth = r * 0.13;
     x.strokeStyle = neon ? shade(color, 0.65) : 'rgba(255,255,255,0.95)';
-    x.beginPath();
-    x.arc(cx, cy, r * 0.9, 0, TAU);
+    path(cx, cy, r * 0.9);
     x.stroke();
-    x.fillStyle = 'rgba(255,255,255,0.4)';
-    x.beginPath();
-    x.ellipse(cx - r * 0.28, cy - r * 0.52, r * 0.34, r * 0.15, -0.5, 0, TAU);
-    x.fill();
+    if (!flat) {
+      x.fillStyle = 'rgba(255,255,255,0.4)';
+      x.beginPath();
+      x.ellipse(cx - r * 0.28, cy - r * 0.52, r * 0.34, r * 0.15, -0.5, 0, TAU);
+      x.fill();
+    }
     sp = { c, half: size / 2 };
     this.sprites.set(key, sp);
     return sp;
