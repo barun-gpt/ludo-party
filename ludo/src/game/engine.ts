@@ -1,5 +1,5 @@
 import { buildGeometry, homeSpot, type BoardGeom, type Vec } from './geometry';
-import type { BannerMsg, GameOptions, Phase, PlayerSetup, Results, Snapshot, Speed } from './types';
+import { DEFAULT_RULES, type BannerMsg, type GameOptions, type Phase, type PlayerSetup, type Results, type RuleOptions, type Snapshot, type Speed } from './types';
 import { audio } from '../audio/audio';
 import { chooseBotMove } from './ai';
 
@@ -80,6 +80,15 @@ interface Tween {
   res: () => void;
 }
 
+/** Nepali rule bookkeeping: one move made with a six, kept so three 6s can take it back. */
+interface SixMoveRec {
+  token: Token;
+  fromPos: number;
+  score: number;
+  wasHome: boolean;
+  victims: { token: Token; fromPos: number }[];
+}
+
 interface BurstOpts {
   speed?: number;
   kind?: Particle['kind'];
@@ -93,6 +102,7 @@ export class LudoGame {
   readonly geom: BoardGeom;
   readonly N: number;
   readonly opts: GameOptions;
+  readonly rules: RuleOptions;
   readonly armOwner: number[];
   players: PlayerState[];
   tokens: Token[][];
@@ -130,9 +140,11 @@ export class LudoGame {
   private selectGen = 0;
   private bannerId = 0;
   private lastTurn = -1;
+  private sixLog: SixMoveRec[] = [];
 
   constructor(opts: GameOptions, palette: string[]) {
     this.opts = opts;
+    this.rules = { ...DEFAULT_RULES, ...(opts.rules ?? {}) };
     this.palette = palette;
     const count = opts.players.length;
     this.N = count === 2 ? 4 : count;
@@ -605,16 +617,35 @@ export class LudoGame {
     this.emit();
 
     if (value === 6 && this.sixCount >= 3) {
-      this.banner('😵 Three 6s!', 'Turn skipped', pi);
+      // Nepali rule: the moves made with those sixes are taken back as well
+      const undo = this.rules.undoSixes && this.sixLog.length > 0;
+      this.banner('😵 Three 6s!', undo ? 'Moves taken back — turn skipped!' : 'Turn skipped', pi);
       audio.play('buzz');
       this.shake(0.25, 300);
-      await this.wait(950);
+      await this.wait(undo ? 650 : 950);
+      if (this.disposed) return;
+      if (undo) {
+        this.undoSixMoves(pi);
+        await this.wait(700);
+      }
       this.sixCount = 0;
+      this.sixLog = [];
       this.advance();
       return;
     }
 
-    const movable = this.getMovable(pi, value);
+    let movable = this.getMovable(pi, value);
+    // Nepali rule: while any token waits in base, a 6 must bring one out — on-board tokens can't use it
+    if (this.rules.exitAllFirst && value === 6 && movable.length > 0) {
+      const yard = movable.filter((ti) => this.tokens[pi][ti].pos < 0);
+      if (yard.length > 0) {
+        if (movable.length > yard.length) this.banner('🏠 Open the yard!', 'A 6 must bring a base token out', pi);
+        movable = yard;
+      }
+    }
+    // Nepali rule: captures are compulsory — remember who could cut so a skipped cut can be punished
+    const cuttable = this.rules.missedCut ? movable.filter((ti) => this.wouldCapture(pi, ti, value)) : [];
+    if (cuttable.length > 0 && !this.isHuman(pi)) movable = movable.filter((ti) => cuttable.includes(ti));
     let extra = value === 6;
     if (movable.length === 0) {
       if (this.isHuman(pi)) this.banner('😅 No moves', value === 6 ? 'Roll again!' : 'Better luck next roll!', pi);
@@ -642,8 +673,25 @@ export class LudoGame {
       this.movable = [];
       this.selected = -1;
       this.emit();
+      const scoreBefore = p.score;
+      const fromPos = this.tokens[pi][choice].pos;
       const r = await this.moveToken(pi, choice, value);
       if (this.disposed) return;
+      if (value === 6 && !r.finished) {
+        // remember the six-move so three 6s can take it back (Nepali rule)
+        this.sixLog.push({
+          token: this.tokens[pi][choice],
+          fromPos,
+          score: p.score - scoreBefore,
+          wasHome: r.home,
+          victims: r.victims,
+        });
+      }
+      if (cuttable.length > 0 && !r.captured && !r.finished) {
+        // Nepali rule: skipped a cut — the token that could have cut gets cut instead
+        await this.missedCutPenalty(pi, cuttable);
+        if (this.disposed) return;
+      }
       if (r.captured || r.home) extra = true;
       if (r.finished) {
         this.finishPlayer(pi);
@@ -653,7 +701,10 @@ export class LudoGame {
     }
     if (this.over || this.disposed) return;
     if (extra) {
-      if (value !== 6) this.sixCount = 0;
+      if (value !== 6) {
+        this.sixCount = 0;
+        this.sixLog = [];
+      }
     } else {
       this.advance();
     }
@@ -703,6 +754,7 @@ export class LudoGame {
       }
     }
     this.sixCount = 0;
+    this.sixLog = [];
     this.emit();
   }
 
@@ -729,7 +781,7 @@ export class LudoGame {
     const g = this.geom;
     const t = this.tokens[pi][ti];
     const col = this.color(pi);
-    const res = { captured: 0, home: false, finished: false };
+    const res = { captured: 0, home: false, finished: false, victims: [] as { token: Token; fromPos: number }[] };
     t.moving = true;
     if (t.pos < 0) {
       const from = { x: t.vx, y: t.vy };
@@ -775,6 +827,7 @@ export class LudoGame {
         const victims = this.tokensOnCell(cell).filter((o) => o.player !== pi);
         if (victims.length) {
           res.captured = victims.length;
+          for (const v of victims) res.victims.push({ token: v, fromPos: v.pos });
           this.players[pi].captures += victims.length;
           this.hitStop = 110;
           this.shake(0.55, 460);
@@ -822,6 +875,60 @@ export class LudoGame {
     this.wait(900).then(() => {
       if (v.face === 'dizzy') v.face = 'normal';
     });
+  }
+
+  /** Nepali rule: three 6s — take back every move made with those sixes (positions, captures, score). */
+  private undoSixMoves(pi: number) {
+    let scoreBack = 0;
+    for (let i = this.sixLog.length - 1; i >= 0; i--) {
+      const rec = this.sixLog[i];
+      const t = rec.token;
+      // bring captured victims back to where they were before the cut
+      for (const v of rec.victims) {
+        const vt = v.token;
+        vt.pos = v.fromPos;
+        vt.face = 'normal';
+        vt.moving = false;
+        vt.landAt = this.clock;
+        this.players[vt.player].captured = Math.max(0, this.players[vt.player].captured - 1);
+        this.players[pi].captures = Math.max(0, this.players[pi].captures - 1);
+        this.dust(vt.vx, vt.vy, 1);
+      }
+      t.pos = rec.fromPos;
+      t.moving = false;
+      if (rec.wasHome) t.face = 'normal';
+      t.landAt = this.clock;
+      scoreBack += rec.score;
+      this.burst(t.vx, t.vy, this.color(t.player), 10, { kind: 1, speed: 3.2 });
+    }
+    this.players[pi].score = Math.max(0, this.players[pi].score - scoreBack);
+    this.floatText(0, -1.7, '↩️ Taken back!', this.color(pi), 1.2);
+    audio.play('whoosh');
+    this.emit();
+  }
+
+  /** Nepali rule: a cut was skipped — the token that could have cut gets cut instead. */
+  private async missedCutPenalty(pi: number, cuttable: number[]) {
+    let target = -1;
+    let bestPos = -Infinity;
+    for (const ti of cuttable) {
+      const pos = this.tokens[pi][ti].pos;
+      if (pos > bestPos) {
+        bestPos = pos;
+        target = ti;
+      }
+    }
+    if (target < 0) return;
+    const t = this.tokens[pi][target];
+    this.banner('⚔️ Missed the cut!', `${this.players[pi].setup.avatar} skipped a capture — penalty!`, pi);
+    audio.play('buzz');
+    this.shake(0.42, 400);
+    this.flash(this.color(pi), 280);
+    await this.wait(520);
+    if (this.disposed) return;
+    await this.sendHome(t);
+    this.floatText(t.vx, t.vy - 0.8, '⚔️ penalty!', this.color(pi), 1.1);
+    this.emit();
   }
 
   private addScore(pi: number, pts: number, at: Vec, label: string) {
@@ -922,6 +1029,7 @@ export class LudoGame {
       canRoll: this.phase === 'roll' && this.isHuman(this.current) && !this.over,
       canSelect: this.phase === 'select' && this.isHuman(this.current),
       movableCount: this.movable.length,
+      cutReady: this.phase === 'select' && this.movable.some((ti) => this.wouldCapture(this.current, ti, this.dice)),
       over: this.over,
     };
   }

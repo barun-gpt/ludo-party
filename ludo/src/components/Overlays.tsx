@@ -240,6 +240,24 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
           Play with 2–6 players on one device: friends and family take turns (pass &amp; play), and you can fill any seat with a computer
           bot (Easy, Normal or Hard). The board changes shape with the player count — triangle, classic cross, pentagon or hexagon!
         </div>
+        <div className="rounded-2xl bg-black/5 p-3 text-sm">
+          <div className="mb-1 font-bold">🇳🇵 Nepali House Rules (optional)</div>
+          <p className="mb-1.5 text-xs text-[var(--sub)]">Switch these on in Multiplayer setup before starting a game — leave them off for classic rules:</p>
+          <ul className="flex flex-col gap-1.5">
+            <li>
+              😵 <b>Three 6s taken back</b> — roll three 6s in a row and your turn is over <i>and</i> every move you made with those sixes is
+              undone (captures go back too)!
+            </li>
+            <li>
+              ⚔️ <b>Cut or get cut</b> — if you skip a capture you could have made, the token that could have cut gets sent home as a
+              penalty. Bots never skip a cut.
+            </li>
+            <li>
+              🏠 <b>Six must open the yard</b> — while any token is still in base, a 6 has to bring one out. Only once all your tokens are
+              out can a 6 move them along the board.
+            </li>
+          </ul>
+        </div>
       </div>
     </Modal>
   );

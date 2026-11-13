@@ -1,4 +1,4 @@
-import { AVATARS, BOT_NAMES, type GameOptions, type PlayerSetup, type Settings } from './game/types';
+import { AVATARS, BOT_NAMES, DEFAULT_RULES, type GameOptions, type PlayerSetup, type Settings } from './game/types';
 
 export function defaultPlayers(): PlayerSetup[] {
   return [
@@ -47,5 +47,6 @@ export function quickOptions(s: Settings): GameOptions {
     autoMove: s.autoMove,
     easyStart: true,
     speed: s.speed,
+    rules: { ...DEFAULT_RULES }, // quick match = classic rules (enable house rules in Multiplayer setup)
   };
 }

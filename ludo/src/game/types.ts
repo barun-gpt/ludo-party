@@ -11,6 +11,15 @@ export interface PlayerSetup {
   avatar: string;
 }
 
+/** Optional Nepali house rules — all off (classic play) unless enabled before the game. */
+export interface RuleOptions {
+  undoSixes: boolean; // three 6s: turn lost AND the moves made with those sixes are taken back
+  missedCut: boolean; // skip a possible capture and the token that could have cut gets cut
+  exitAllFirst: boolean; // while tokens wait in base, a 6 must bring one out (no on-board moves)
+}
+
+export const DEFAULT_RULES: RuleOptions = { undoSixes: false, missedCut: false, exitAllFirst: false };
+
 export interface GameOptions {
   players: PlayerSetup[];
   tokens: number; // 1..4
@@ -18,6 +27,7 @@ export interface GameOptions {
   autoMove: boolean;
   easyStart: boolean;
   speed: Speed;
+  rules: RuleOptions;
 }
 
 export interface SetupPrefs {
@@ -25,6 +35,7 @@ export interface SetupPrefs {
   tokens: number;
   endMode: EndMode;
   easyStart: boolean;
+  rules: RuleOptions;
 }
 
 export interface Settings {
@@ -81,6 +92,7 @@ export interface Snapshot {
   canRoll: boolean;
   canSelect: boolean;
   movableCount: number;
+  cutReady: boolean; // one of the movable tokens can capture right now
   over: boolean;
 }
 
