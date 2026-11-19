@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { PlayerSnap, Snapshot } from '../game/types';
+import type { PlayerSnap, RuleOptions, Snapshot } from '../game/types';
 import type { Theme } from '../themes';
 import { shade } from '../themes';
 import Dice from './Dice';
@@ -70,12 +70,14 @@ export function FloatingDice({
   color,
   style,
   onRoll,
+  rules,
 }: {
   snap: Snapshot;
   theme: Theme;
   color: string;
   style: CSSProperties;
   onRoll: () => void;
+  rules?: RuleOptions;
 }) {
   if (snap.over) return null;
   return (
@@ -102,7 +104,7 @@ export function FloatingDice({
       )}
       {!snap.canRoll && snap.humanTurn && snap.phase === 'select' && (
         <span className="rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-900 shadow-lg">
-          Pick a token!
+          {snap.cutReady ? (rules?.missedCut ? '⚔️ Cut or lose one!' : '⚔️ Capture!') : 'Pick a token!'}
         </span>
       )}
     </div>

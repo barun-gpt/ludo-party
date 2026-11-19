@@ -16,4 +16,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "src"),
     },
   },
+  // reachable from any device/host so the game can be tested on real phones during dev
+  server: { host: true, allowedHosts: true },
+  preview: { host: true, allowedHosts: true },
 });

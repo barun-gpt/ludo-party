@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { BannerMsg, PlayerSnap, Snapshot } from '../game/types';
+import type { BannerMsg, PlayerSnap, RuleOptions, Snapshot } from '../game/types';
 import type { Theme } from '../themes';
 import { rgba, shade } from '../themes';
 import Dice from './Dice';
@@ -78,11 +78,13 @@ export function DicePanel({
   theme,
   onRoll,
   landscape,
+  rules,
 }: {
   snap: Snapshot;
   theme: Theme;
   onRoll: () => void;
   landscape: boolean;
+  rules?: RuleOptions;
 }) {
   const cur = snap.players[snap.current];
   const color = theme.players[cur.color];
@@ -92,7 +94,14 @@ export function DicePanel({
   else if (snap.humanTurn) {
     if (snap.phase === 'roll') hint = landscape ? 'Click the dice or press Space!' : 'Tap the dice to roll!';
     else if (snap.phase === 'rolling') hint = 'Rolling…';
-    else if (snap.phase === 'select') hint = snap.movableCount > 1 ? 'Pick a glowing token!' : 'Moving…';
+    else if (snap.phase === 'select')
+      hint = snap.cutReady
+        ? rules?.missedCut
+          ? '⚔️ Cut! Skipping costs a token'
+          : '⚔️ Capture available!'
+        : snap.movableCount > 1
+          ? 'Pick a glowing token!'
+          : 'Moving…';
     else hint = 'Moving…';
   } else {
     hint = snap.phase === 'rolling' ? 'Rolling…' : snap.phase === 'select' ? 'Thinking…' : snap.phase === 'moving' ? 'Moving…' : 'Getting ready…';
@@ -113,7 +122,12 @@ export function DicePanel({
           {cur.kind === 'bot' && <span className="text-sm">🤖</span>}
         </div>
         <div className="text-sm font-medium text-[var(--sub)]">{hint}</div>
-        {snap.sixCount > 0 && !snap.over && <div className="mt-0.5 text-xs font-bold text-amber-500">🔥 Six streak ×{snap.sixCount}</div>}
+        {snap.sixCount > 0 && !snap.over && (
+          <div className="mt-0.5 text-xs font-bold text-amber-500">
+            🔥 Six streak ×{snap.sixCount}
+            {rules?.undoSixes && ' · beware the 3rd!'}
+          </div>
+        )}
       </div>
       <div className="relative grid place-items-center p-2">
         <Dice

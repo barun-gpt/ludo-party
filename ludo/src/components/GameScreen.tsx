@@ -373,6 +373,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
                   color={activeColor}
                   style={diceStyle}
                   onRoll={roll}
+                  rules={options.rules}
                 />
               )}
               {!snap.humanTurn && !snap.over && (
@@ -385,7 +386,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
             </>
           )}
         </div>
-        {!showCompact && snap && <DicePanel snap={snap} theme={theme} onRoll={roll} landscape={landscape} />}
+        {!showCompact && snap && <DicePanel snap={snap} theme={theme} onRoll={roll} landscape={landscape} rules={options.rules} />}
       </div>
 
       {paused && !results && (

@@ -593,6 +593,15 @@ export class Renderer {
         ctx.lineWidth = 0.075;
         ctx.strokeStyle = selected ? '#fde047' : '#ffffff';
         ctx.stroke();
+        if (game.wouldCapture(t.player, t.idx, game.dice)) {
+          // red ring: this token can capture with the current roll
+          const cp = 0.5 + 0.5 * Math.sin(clock / 130);
+          ctx.beginPath();
+          ctx.arc(t.vx, t.vy + r * 0.12, r * (1.62 + 0.12 * cp), 0, TAU);
+          ctx.lineWidth = 0.07;
+          ctx.strokeStyle = '#ef4444';
+          ctx.stroke();
+        }
       }
 
       const sp = this.sprite(col);

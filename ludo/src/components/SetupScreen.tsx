@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { AVATARS, BOT_NAMES, type BotLevel, type EndMode, type GameOptions, type PlayerKind, type PlayerSetup, type Settings } from '../game/types';
+import {
+  AVATARS,
+  BOT_NAMES,
+  DEFAULT_RULES,
+  type BotLevel,
+  type EndMode,
+  type GameOptions,
+  type PlayerKind,
+  type PlayerSetup,
+  type RuleOptions,
+  type Settings,
+} from '../game/types';
 import type { Theme } from '../themes';
 import { rgba } from '../themes';
 import { fixColors, mergeSlots } from '../setup';
@@ -30,6 +41,7 @@ export default function SetupScreen({ theme, settings, update, onBack, onStart }
   const [tokens, setTokens] = useState(saved?.tokens ?? 4);
   const [endMode, setEndMode] = useState<EndMode>(saved?.endMode ?? 'first');
   const [easyStart, setEasyStart] = useState(saved?.easyStart ?? true);
+  const [rules, setRules] = useState<RuleOptions>(() => ({ ...DEFAULT_RULES, ...(saved?.rules ?? {}) }));
 
   const active = players.slice(0, count);
   const setP = (i: number, patch: Partial<PlayerSetup>) => setPlayers((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
@@ -76,11 +88,12 @@ export default function SetupScreen({ theme, settings, update, onBack, onStart }
       ...p,
       name: p.name.trim() || (p.kind === 'bot' ? BOT_NAMES[i] : `Player ${i + 1}`),
     }));
-    update({ setup: { players: ps, tokens, endMode, easyStart } });
-    onStart({ players: ps, tokens, endMode, easyStart, autoMove: settings.autoMove, speed: settings.speed });
+    update({ setup: { players: ps, tokens, endMode, easyStart, rules } });
+    onStart({ players: ps, tokens, endMode, easyStart, autoMove: settings.autoMove, speed: settings.speed, rules });
   };
 
   const humans = active.filter((p) => p.kind === 'human').length;
+  const ruleCount = Object.values(rules).filter(Boolean).length;
 
   return (
     <div className="scroll-thin absolute inset-0 overflow-y-auto">
@@ -240,11 +253,37 @@ export default function SetupScreen({ theme, settings, update, onBack, onStart }
           </div>
         </section>
 
+        <section className="panel rounded-3xl p-4">
+          <div className="mb-0.5 font-bold">🇳🇵 Nepali House Rules</div>
+          <p className="mb-2 text-xs text-[var(--sub)]">Optional local rules — switch on any you want before starting. All off = classic rules.</p>
+          <div className="rounded-2xl bg-black/5 px-2 py-1">
+            <Toggle
+              checked={rules.undoSixes}
+              onChange={(v) => setRules((r) => ({ ...r, undoSixes: v }))}
+              label="😵 Three 6s taken back"
+              hint="Roll three 6s in a row: your turn is over AND every move you made with those sixes is undone (captures included)"
+            />
+            <Toggle
+              checked={rules.missedCut}
+              onChange={(v) => setRules((r) => ({ ...r, missedCut: v }))}
+              label="⚔️ Cut or get cut"
+              hint="Skip a capture you could have made and the token that could have cut gets sent home! Bots always cut."
+            />
+            <Toggle
+              checked={rules.exitAllFirst}
+              onChange={(v) => setRules((r) => ({ ...r, exitAllFirst: v }))}
+              label="🏠 Six must open the yard"
+              hint="While any token is still in base, a 6 must bring one out — you can't move on-board tokens with it"
+            />
+          </div>
+        </section>
+
         <Btn onClick={start} className="py-4 text-2xl">
           🎲 Start Game
           <div className="text-xs font-semibold opacity-90">
             {count} players · {humans} {humans === 1 ? 'human' : 'humans'} · {count - humans} {count - humans === 1 ? 'bot' : 'bots'} · {tokens}{' '}
             {tokens === 1 ? 'token' : 'tokens'} each
+            {ruleCount > 0 && ` · 🇳🇵 ${ruleCount} house rule${ruleCount > 1 ? 's' : ''}`}
           </div>
         </Btn>
       </div>
