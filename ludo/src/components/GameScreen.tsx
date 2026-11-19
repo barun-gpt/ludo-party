@@ -322,8 +322,8 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
 
   return (
     <div className="absolute inset-0 flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center gap-2 px-3 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
+      {/* Top bar — banner notifications pop up here, keeping the board clear */}
+      <div className="relative flex items-center gap-2 px-3 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
         <IconBtn label="Pause (P)" onClick={() => setPaused(true)}>
           ⏸️
         </IconBtn>
@@ -338,6 +338,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
         <IconBtn label="Toggle sound effects" onClick={() => update({ sfx: !settings.sfx })}>
           {settings.sfx ? '🔊' : '🔈'}
         </IconBtn>
+        {banner && <Banner b={banner} theme={theme} />}
       </div>
 
       {/* Main area */}
@@ -351,7 +352,6 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
             onPointerMove={onPointerMove}
             onContextMenu={(e) => e.preventDefault()}
           />
-          {banner && <Banner b={banner} theme={theme} />}
 
           {/* Compact overlays (portrait phone) */}
           {showCompact && snap && (
