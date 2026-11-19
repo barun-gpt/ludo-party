@@ -165,19 +165,20 @@ export function DicePanel({
 
 export function Banner({ b, theme }: { b: BannerMsg; theme: Theme }) {
   const color = b.color !== undefined ? theme.players[b.color] : theme.btn;
+  // Pinned to the top bar (the component is rendered inside it) so the board stays clean.
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[28%] z-10 flex justify-center px-4">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-center px-14 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
       <div
         key={b.id}
-        className="banner-pop max-w-full rounded-3xl px-6 py-2.5 text-center text-white shadow-2xl"
+        className="banner-pop max-w-full rounded-2xl px-5 py-2 text-center text-white shadow-2xl"
         style={{
           background: `linear-gradient(180deg, ${color}, ${shade(color, -0.28)})`,
           border: '3px solid rgba(255,255,255,0.9)',
           textShadow: '0 2px 0 rgba(0,0,0,.28)',
         }}
       >
-        <div className={`${b.big ? 'text-3xl sm:text-4xl' : 'text-2xl sm:text-3xl'} font-bold leading-tight`}>{b.text}</div>
-        {b.sub && <div className="text-sm font-semibold opacity-95 sm:text-base">{b.sub}</div>}
+        <div className={`${b.big ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'} font-bold leading-tight`}>{b.text}</div>
+        {b.sub && <div className="text-xs font-semibold opacity-95 sm:text-sm">{b.sub}</div>}
       </div>
     </div>
   );
