@@ -8,9 +8,9 @@ import { addScore } from '../storage';
 import { addPlaySeconds, recordGameResult } from '../economy/store';
 import { useMedia } from '../hooks/useMedia';
 import { IconBtn } from './ui';
-import { Banner, DicePanel, PlayersPanel } from './Hud';
+import { Banner, DicePanel, PlayersPanel, ScoreChips, TurnChip } from './Hud';
 import { GameOver, PauseMenu } from './Overlays';
-import { CompactBadge, FloatingDice } from './CompactUI';
+import { FloatingDice } from './CompactUI';
 
 interface Props {
   options: GameOptions;
@@ -240,8 +240,7 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
     const c = canvasRef.current;
     if (!g || !b || !c) return;
     const over = g.hoverAt(b.x, b.y);
-    const clickable = over || (g.phase === 'roll' && g.isHuman(g.current) && !g.over);
-    c.style.cursor = clickable ? 'pointer' : 'default';
+    c.style.cursor = over ? 'pointer' : 'default';
   };
 
   // count active play time (not while paused / after game over) for the daily & weekly time tasks
@@ -259,23 +258,6 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
 
   // ------------------------------------------------------------ compact-mode positions
   const g = gameRef.current;
-
-  /** Floating positions for the compact overlay (portrait phone). */
-  const badgeStyles = useMemo(() => {
-    if (!canvasSize.w || armPos.length === 0) return [];
-    return armPos.map((a) => {
-      // Direction from canvas center to this arm
-      const dx = a.x - canvasSize.w / 2;
-      const dy = a.y - canvasSize.h / 2;
-      const len = Math.hypot(dx, dy) || 1;
-      // Push further toward the edge, then clamp to keep badges visible
-      const padX = 36;
-      const padY = 32;
-      const bx = Math.max(padX, Math.min(canvasSize.w - padX, a.x + (dx / len) * 36));
-      const by = Math.max(padY, Math.min(canvasSize.h - padY, a.y + (dy / len) * 36));
-      return { left: `${bx}px`, top: `${by}px`, transform: 'translate(-50%, -50%)', zIndex: 5 };
-    });
-  }, [armPos, canvasSize]);
 
   const diceStyle = useMemo(() => {
     if (!canvasSize.w || !snap || snap.over || armPos.length === 0) return {};
@@ -322,8 +304,8 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
 
   return (
     <div className="absolute inset-0 flex flex-col">
-      {/* Top bar — banner notifications pop up here, keeping the board clear */}
-      <div className="relative flex items-center gap-2 px-3 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
+      {/* Top bar */}
+      <div className="flex items-center gap-2 px-3 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
         <IconBtn label="Pause (P)" onClick={() => setPaused(true)}>
           ⏸️
         </IconBtn>
@@ -338,7 +320,19 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
         <IconBtn label="Toggle sound effects" onClick={() => update({ sfx: !settings.sfx })}>
           {settings.sfx ? '🔊' : '🔈'}
         </IconBtn>
-        {banner && <Banner b={banner} theme={theme} />}
+      </div>
+
+      {/* Status strip — banner notifications live in their own dedicated row here,
+          so nothing ever overlays them and they never cover the board or buttons.
+          When idle it shows turn info (or score chips on compact phones). */}
+      <div className="flex h-16 shrink-0 items-center justify-center px-2">
+        {banner ? (
+          <Banner b={banner} theme={theme} />
+        ) : snap && showCompact ? (
+          <ScoreChips snap={snap} theme={theme} />
+        ) : snap ? (
+          <TurnChip snap={snap} theme={theme} />
+        ) : null}
       </div>
 
       {/* Main area */}
@@ -353,37 +347,10 @@ export default function GameScreen({ options, theme, settings, update, onExit, o
             onContextMenu={(e) => e.preventDefault()}
           />
 
-          {/* Compact overlays (portrait phone) */}
-          {showCompact && snap && (
-            <>
-              {snap.players.map((p, i) => (
-                <CompactBadge
-                  key={i}
-                  p={p}
-                  active={i === snap.current}
-                  color={theme.players[p.color]}
-                  style={badgeStyles[i]}
-                  snap={snap}
-                />
-              ))}
-              {snap.humanTurn && activePlayer && (
-                <FloatingDice
-                  snap={snap}
-                  theme={theme}
-                  color={activeColor}
-                  style={diceStyle}
-                  onRoll={roll}
-                  rules={options.rules}
-                />
-              )}
-              {!snap.humanTurn && !snap.over && (
-                <div
-                  className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/55 px-3 py-1 text-xs font-bold text-white backdrop-blur"
-                >
-                  {activePlayer?.avatar} {activePlayer?.name}'s turn…
-                </div>
-              )}
-            </>
+          {/* Compact overlay (portrait phone): just the floating dice control —
+              scores live in the top status strip so the board stays completely clear */}
+          {showCompact && snap && snap.humanTurn && activePlayer && (
+            <FloatingDice snap={snap} theme={theme} color={activeColor} style={diceStyle} onRoll={roll} rules={options.rules} />
           )}
         </div>
         {!showCompact && snap && <DicePanel snap={snap} theme={theme} onRoll={roll} landscape={landscape} rules={options.rules} />}

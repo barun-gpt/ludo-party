@@ -165,20 +165,105 @@ export function DicePanel({
 
 export function Banner({ b, theme }: { b: BannerMsg; theme: Theme }) {
   const color = b.color !== undefined ? theme.players[b.color] : theme.btn;
-  // Pinned to the top bar (the component is rendered inside it) so the board stays clean.
+  // Rendered inside the dedicated status strip below the top bar — its own space,
+  // so it never covers the board, the top-bar buttons, or any other UI.
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-center justify-center px-14 pb-1 pt-[max(env(safe-area-inset-top),0.5rem)]">
+    <div className="flex w-full items-center justify-center px-3">
       <div
         key={b.id}
-        className="banner-pop max-w-full rounded-2xl px-5 py-2 text-center text-white shadow-2xl"
+        className="banner-pop max-w-full rounded-2xl border-2 px-5 py-1.5 text-center text-white shadow-2xl"
         style={{
           background: `linear-gradient(180deg, ${color}, ${shade(color, -0.28)})`,
-          border: '3px solid rgba(255,255,255,0.9)',
+          borderColor: 'rgba(255,255,255,0.9)',
           textShadow: '0 2px 0 rgba(0,0,0,.28)',
         }}
       >
-        <div className={`${b.big ? 'text-2xl sm:text-3xl' : 'text-xl sm:text-2xl'} font-bold leading-tight`}>{b.text}</div>
-        {b.sub && <div className="text-xs font-semibold opacity-95 sm:text-sm">{b.sub}</div>}
+        <div className={`${b.big ? 'text-2xl' : 'text-lg sm:text-xl'} font-bold leading-tight`}>{b.text}</div>
+        {b.sub && <div className="text-xs font-semibold opacity-95">{b.sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+/** Idle content of the status strip (non-compact layouts): whose turn it is + status. */
+export function TurnChip({ snap, theme }: { snap: Snapshot; theme: Theme }) {
+  const cur = snap.players[snap.current];
+  const color = theme.players[cur.color];
+  const status = snap.over
+    ? 'Game over!'
+    : snap.phase === 'intro'
+      ? 'Get ready…'
+      : cur.kind === 'bot'
+        ? snap.phase === 'rolling'
+          ? 'is rolling…'
+          : 'is thinking…'
+        : snap.canRoll
+          ? 'tap the dice to roll!'
+          : snap.phase === 'rolling'
+            ? 'Rolling…'
+            : snap.phase === 'select'
+              ? 'pick a glowing token!'
+              : 'Moving…';
+  return (
+    <div
+      className="flex items-center gap-2 rounded-full px-3 py-1.5"
+      style={{
+        background: rgba(color, 0.16),
+        border: `2px solid ${rgba(color, 0.55)}`,
+      }}
+    >
+      <span
+        className="grid h-7 w-7 place-items-center rounded-full text-base"
+        style={{ background: color, boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.18)' }}
+      >
+        {cur.avatar}
+      </span>
+      <span className="max-w-[36vw] truncate text-sm font-bold">
+        {cur.name}
+        {cur.kind === 'bot' && ' 🤖'}
+      </span>
+      <span className="text-xs font-medium text-[var(--sub)]">{status}</span>
+      {snap.sixCount > 0 && !snap.over && <span className="text-xs font-bold text-amber-500">🔥 ×{snap.sixCount}</span>}
+    </div>
+  );
+}
+
+/** Idle content of the status strip (compact phones): slim score chips — no overlays on the board. */
+export function ScoreChips({ snap, theme }: { snap: Snapshot; theme: Theme }) {
+  return (
+    <div className="scroll-thin flex w-full items-center overflow-x-auto">
+      <div className="mx-auto flex w-max items-center gap-1.5 px-1">
+        {snap.players.map((p, i) => {
+          const c = theme.players[p.color];
+          const active = i === snap.current && !snap.over;
+          return (
+            <div
+              key={i}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 transition-all duration-300 ${
+                active ? 'scale-105' : 'opacity-75'
+              } ${p.rank ? 'saturate-50' : ''}`}
+              style={
+                {
+                  '--pc': c,
+                  background: rgba(c, 0.18),
+                  border: `2px solid ${active ? c : rgba(c, 0.5)}`,
+                  boxShadow: active ? `0 2px 12px ${rgba(c, 0.45)}` : 'none',
+                } as CSSProperties
+              }
+            >
+              <span
+                className="grid h-7 w-7 place-items-center rounded-full text-base"
+                style={{ background: c, boxShadow: 'inset 0 -2px 0 rgba(0,0,0,.18)' }}
+              >
+                {p.avatar}
+              </span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: theme.dark ? shade(c, 0.3) : shade(c, -0.18) }}>
+                {p.score}
+              </span>
+              {p.rank > 0 && <span className="text-xs">{MEDALS[p.rank]}</span>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
