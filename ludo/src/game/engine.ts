@@ -509,7 +509,7 @@ export class LudoGame {
   /** pointer tap on the board (board coordinates) */
   tapAt(bx: number, by: number): boolean {
     if (this.paused || !this.isHuman(this.current)) return false;
-    if (this.phase === 'roll') return this.requestRoll();
+    // note: the dice rolls ONLY via requestRoll()/confirm() (dice tap or keyboard) — never from board taps
     if (this.phase === 'select') {
       const ti = this.tokenNear(bx, by, 1.5);
       if (ti >= 0) return this.chooseToken(ti);
